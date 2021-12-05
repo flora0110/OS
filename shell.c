@@ -154,47 +154,183 @@ void openHelp()
     return;
 }
 
+extern char** environ;
+char* undefined[MAXLIST];
+int numOfundefined=0;
+void export(char** parsed){
+	
+	//printf("%s",parsed[1]);
+	if(parsed[1]==NULL){
+		char** var;
+		for(var=environ;*var!=NULL;++var)
+			printf("%s\n",*var);
+		int i;		
+		for(i=0;i<numOfundefined;i++){
+			printf("%s\n",undefined[i]);
+		}
+		
+	}
+	else if(strcmp(parsed[1],"-p")==0){
+		//printf("ppp\n");
+		if(parsed[2]==NULL){
+			char** var;
+			for(var=environ;*var!=NULL;++var)
+				printf("%s\n",*var);
+			int i;		
+			for(i=0;i<numOfundefined;i++){
+				printf("%s\n",undefined[i]);
+			}
+			
+		}
+		else{
+			putenv(parsed[1]);
+			
+		}
+	}
+	else if(strcmp(parsed[1],"-n")==0){
+		//printf("nnn\n");
+		if(parsed[2]!=NULL){
+			int i,check=0;
+			for(i=0;i<numOfundefined;i++){
+				if(strcmp(undefined[i],parsed[2])==0){
+					check=1;
+					numOfundefined--;
+				}
+				if(check==1){
+					undefined[i]=undefined[i+1];
+				}
+			}
+			unsetenv(parsed[2]);
+			
+		}
+		else{
+			char** var;
+			for(var=environ;*var!=NULL;++var)
+				printf("%s\n",*var);
+			int i;		
+			for(i=0;i<numOfundefined;i++){
+				printf("%s\n",undefined[i]);
+			}
+			
+		}
+	}
+	else if(strcmp(parsed[1],"-f")==0 ){
+		if(parsed[2]!=NULL){
+			printf("bash: export: %s: not a function",parsed[2]);
+			
+		}
+	}
+	else if(parsed[1][0]=='-'){
+		printf("bash: export: %s: invalid option\nexport: usage: export [-fn] [name[=value] ...] or export -p",parsed[1]);
+	}
+	else {
+		
+		char* copy = (char*)malloc(sizeof(char)*(strlen(parsed[1])+5));
+		strcpy(copy,parsed[1]);
+		char* exportNV[3];
+		int i;
+		for (i = 0; i < 3; i++) {
+			exportNV[i] = strsep(&parsed[1], "=");
+			if (exportNV[i] == NULL)
+				break;
+		}
+		if(i==1){
+			//printf("bash: export: `%s': not a valid identifier\n",parsed[1]);
+			//printf("format: export [NAME]=[VALUE]\n");
+			int i,check=0;
+			for(i=0;i<numOfundefined;i++){
+				if(strcmp(undefined[i],copy)==0){
+					check=1;
+					break;
+				}
+			}
+			if(check==0 && getenv(copy)==NULL){
+				undefined[numOfundefined++]=copy;
+			}
+		}
+		else{
+			int i,check=0;
+			for(i=0;i<numOfundefined;i++){
+				if(strcmp(undefined[i],exportNV[0])==0){
+					check=1;
+					numOfundefined--;
+				}
+				if(check==1){
+					undefined[i]=undefined[i+1];
+				}
+			}
+			putenv(copy);
+		}
+	}
+}
 // Function to execute builtin commands
-int ownCmdHandler(char** parsed)
-{
-    int NoOfOwnCmds = 4, i, switchOwnArg = 0;
-    char* ListOfOwnCmds[NoOfOwnCmds];
-    char* username;
+int ownCmdHandler(char** parsed){
 
-    ListOfOwnCmds[0] = "exit";
-    ListOfOwnCmds[1] = "cd";
-    ListOfOwnCmds[2] = "help";
-    ListOfOwnCmds[3] = "hello";
+	int NoOfOwnCmds = 7, i, switchOwnArg = 0;
+    	char* ListOfOwnCmds[NoOfOwnCmds];
+    	char* username;
 
-    for (i = 0; i < NoOfOwnCmds; i++) {
-        if (strcmp(parsed[0], ListOfOwnCmds[i]) == 0) {
-            switchOwnArg = i + 1;
-            break;
-        }
-    }
+    	ListOfOwnCmds[0] = "exit";
+    	ListOfOwnCmds[1] = "cd";
+    	ListOfOwnCmds[2] = "help";
+    	ListOfOwnCmds[3] = "hello";
+	ListOfOwnCmds[4] = "export";
+    	ListOfOwnCmds[5] = "echo";
+    	ListOfOwnCmds[6] = "pwd";
 
-    switch (switchOwnArg) {
-    case 1:
-        printf("\nGoodbye\n");
-        exit(0);
-    case 2:
-        chdir(parsed[1]);
-        return 1;
-    case 3:
-        openHelp();
-        return 1;
-    case 4:
-        username = getenv("USER");
-        printf("\nHello %s.\nMind that this is "
-            "not a place to play around."
-            "\nUse help to know more..\n",
-            username);
-        return 1;
-    default:
-        break;
-    }
+    	for (i = 0; i < NoOfOwnCmds; i++) {
+        	if (strcmp(parsed[0], ListOfOwnCmds[i]) == 0) {
+            	switchOwnArg = i + 1;
+            	break;
+        	}
+    	}
 
-    return 0;
+    	switch (switchOwnArg) {
+    	case 1:
+        	printf("\nGoodbye\n");
+        	exit(0);
+    	case 2:
+        	chdir(parsed[1]);
+        	return 1;
+    	case 3:
+        	openHelp();
+        	return 1;
+    	case 4:
+        	username = getenv("USER");
+        	printf("\nHello %s.\nMind that this is "
+            	"not a place to play around."
+            	"\nUse help to know more..\n",
+            	username);
+        	return 1;
+	case 5:
+		export(parsed);
+		return 1;
+	case 6:
+		printf("\n6\n");
+		printf("\n");
+		if (parsed[1] != NULL){
+			printf("%s",parsed[1]);
+		}
+		int i;
+		for (i = 2; i < MAXLIST; i++) {
+			if (parsed[i] == NULL){
+				break;
+			}
+			printf(" %s",parsed[i]);
+			    
+		}
+		printf("\n");
+		return 1;
+	case 7:
+		printf("\n7\n");
+		printf("\n%s\n",cwd);
+		return 1;
+
+    	default:
+        	break;
+    	}
+
+    	return 0;
 }
 
 // function for finding pipe
