@@ -266,17 +266,17 @@ void export(char** parsed){
 // Function to execute builtin commands
 int ownCmdHandler(char** parsed){
 
-	int NoOfOwnCmds = 7, i, switchOwnArg = 0;
+	int NoOfOwnCmds = 5, i, switchOwnArg = 0;
     	char* ListOfOwnCmds[NoOfOwnCmds];
     	char* username;
 
     	ListOfOwnCmds[0] = "exit";
     	ListOfOwnCmds[1] = "cd";
-    	ListOfOwnCmds[2] = "help";
-    	ListOfOwnCmds[3] = "hello";
-	ListOfOwnCmds[4] = "export";
-    	ListOfOwnCmds[5] = "echo";
-    	ListOfOwnCmds[6] = "pwd";
+    	//ListOfOwnCmds[2] = "help";
+    	//ListOfOwnCmds[3] = "hello";
+	ListOfOwnCmds[2] = "export";
+    	ListOfOwnCmds[3] = "echo";
+    	ListOfOwnCmds[4] = "pwd";
 
     	for (i = 0; i < NoOfOwnCmds; i++) {
         	if (strcmp(parsed[0], ListOfOwnCmds[i]) == 0) {
@@ -287,12 +287,12 @@ int ownCmdHandler(char** parsed){
 
     	switch (switchOwnArg) {
     	case 1:
-        	printf("\nGoodbye\n");
+        	//printf("\nGoodbye\n");
         	exit(0);
     	case 2:
         	chdir(parsed[1]);
         	return 1;
-    	case 3:
+    	/*case 3:
         	openHelp();
         	return 1;
     	case 4:
@@ -301,28 +301,50 @@ int ownCmdHandler(char** parsed){
             	"not a place to play around."
             	"\nUse help to know more..\n",
             	username);
-        	return 1;
-	case 5:
+        	return 1;*/
+	case 3:
 		export(parsed);
 		return 1;
-	case 6:
-		printf("\n6\n");
+	case 4:
 		printf("\n");
 		if (parsed[1] != NULL){
-			printf("%s",parsed[1]);
-		}
-		int i;
-		for (i = 2; i < MAXLIST; i++) {
-			if (parsed[i] == NULL){
-				break;
+			if(parsed[1][0]==34){
+				int i;
+				for(i=1;i<strlen(parsed[1])-1;i++){
+					printf("%c",parsed[1][i]);
+				}
+				if(parsed[1][i]!=34){
+					printf("%c",parsed[1][i]);
+				}
+				for (i = 2; i < MAXLIST; i++) {
+					if (parsed[i] == NULL){
+						break;
+					}
+					int j;
+					for(j=1;i<strlen(parsed[1])-1;i++){
+						printf("%c",parsed[1][j]);
+					}
+					if(parsed[1][j]!=34){
+						printf("%c",parsed[1][j]);
+					}
+				}
+				printf("\n");
+				return 1;
 			}
-			printf(" %s",parsed[i]);
-			    
+			printf("%s",parsed[1]);
+			int i;
+			for (i = 2; i < MAXLIST; i++) {
+				if (parsed[i] == NULL){
+					break;
+				}
+				printf(" %s",parsed[i]);
+				    
+			}
+			printf("\n");
 		}
-		printf("\n");
+		
 		return 1;
-	case 7:
-		printf("\n7\n");
+	case 5:
 		printf("\n%s\n",cwd);
 		return 1;
 
