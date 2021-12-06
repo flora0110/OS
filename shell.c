@@ -369,6 +369,7 @@ void export(char** parsed,int or,int block){
 			if (exportNV[i] == NULL)
 				break;
 		}
+		//no =
 		if(i==1){
 			//printf("bash: export: `%s': not a valid identifier\n",parsed[1]);
 			//printf("format: export [NAME]=[VALUE]\n");
@@ -383,7 +384,9 @@ void export(char** parsed,int or,int block){
 				undefined[numOfundefined++]=copy;
 			}
 		}
+		//there has =
 		else{
+			//check if var already in undefined
 			int i,check=0;
 			for(i=0;i<numOfundefined;i++){
 				if(strcmp(undefined[i],exportNV[0])==0){
@@ -394,7 +397,49 @@ void export(char** parsed,int or,int block){
 					undefined[i]=undefined[i+1];
 				}
 			}
-			putenv(copy);
+			//check if value include $
+			check=0;int start;
+			for(i=0;i<strlen(copy);i++){
+				//printf("copy %c\n",copy[i]);
+				if(copy[i]=='$'){
+					check=1;start=i;
+					i+=2;
+					break;
+				}
+			}
+			//printf("i%d\n",i);
+			if(check==1){
+				char* name=(char*)malloc(sizeof(char)*30);
+				int q=0;
+				for(i;i<strlen(copy);i++){
+					//printf("2 copy %c\n",copy[i]);
+					if(copy[i]=='}'){
+						name[q]='\0';
+						break;
+					}
+					name[q++]=copy[i];
+					//printf("value %c\n",value[i]);
+				}
+				//printf("name is %s, len is %ld\n",name,strlen(name));
+				char* value=getenv(name);
+				int new_len=strlen(copy)+strlen(value);
+				char* new_copy = (char*)malloc(sizeof(char)*new_len);
+				int j,k,copy_index=0;
+				//printf("start %d new_copy %c\n",start,copy[start]);
+				for(j=0;j<new_len;j++){
+					if(j==start){
+						for(k=0;k<strlen(value);k++){
+							new_copy[j++]=value[k];
+						}
+						j--;copy_index=i+1;
+						//printf("j at %d\n",j);
+					}
+					else new_copy[j]=copy[copy_index++];
+				}
+				//printf("new_copy %s\n",new_copy);
+				putenv(new_copy);
+			}
+			else if(check==0) putenv(copy);
 		}
 	}
 	if(or==1) {//printf("export os 1\n");
