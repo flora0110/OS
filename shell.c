@@ -75,6 +75,7 @@ void output_redirection(char** args){
     	int j;
     	int err;
 	int pid;
+	int app=0;
 	args2 = malloc(80 * sizeof(char *));
 	// assume no redirections
         ofile = NULL;
@@ -111,6 +112,10 @@ void output_redirection(char** args){
                 if (cp[1] == 0){//only one char(only >)
 		    //printf("if\n");
                     cp = args[i++];}
+		else if(cp[1]=='>'){
+			//printf("app\n");
+			app=1;
+		}
                 else{//between > and file no block
 		    //printf("else\n");
                     ++cp;}
@@ -152,12 +157,20 @@ void output_redirection(char** args){
 
             // open stdout
             if (ofile != NULL) {
-                int fd2;
-                if ((fd2 = open(ofile, O_WRONLY | O_CREAT, 0644)) < 0) {
-                    perror("couldn't open output file.");
-                    exit(0);
-                }
-		printf("ofile3 %s %ld\n",ofile,strlen(ofile));
+		int fd2;
+		if(app==1){
+			if ((fd2 = open(ofile, O_APPEND | O_WRONLY, 0644)) < 0) {
+		            perror("couldn't open output file.");
+		            exit(0);
+		        }
+		}
+                else{
+		        if ((fd2 = open(ofile, O_WRONLY | O_CREAT, 0644)) < 0) {
+		            perror("couldn't open output file.");
+		            exit(0);
+		        }
+		}
+		//printf("ofile3 %s %ld\n",ofile,strlen(ofile));
 		//printf("kkk\n");
 		//printf("okay\n");
                 // args+=2;
@@ -663,7 +676,7 @@ printf("[%d]+  Done                    %s\n",i+1,cmd[i]);
 		return 1;
 	case 7:
 		//printf("%d\n",kill(atoi(parsed[1]),SIGABRT));
-		kill(atoi(parsed[1]),SIGABRT)
+		kill(atoi(parsed[1]),SIGABRT);
 		return 1;
     	default:
         	break;
