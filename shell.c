@@ -183,23 +183,101 @@ void output_redirection(char** args){
             //waitpid(pid, 0, 0);
         }
 }
+
 // Function where the system command is executed
+int backpid[MAXLIST];
+int backpid_index=0;
+char* cmd[MAXLIST];
+char* input_copy;
+int background;
+
+void sig_handler(int signo){
+	//printf("child process deaded, signo : %d\n",signo);
+	//printf("background %d\n",background);
+	pid_t pid=wait(0);
+	if(background==1){
+		int i,j;
+		for(i=0;i<backpid_index;i++){
+			
+			if(backpid[i]==pid){
+				
+				//printf("inif\n");
+				backpid[i]=-backpid[i];
+				//printf("backpid[%d] %d\n",i,backpid[i]);
+				for(j=0;j<strlen(cmd[i]);j++){
+					if(cmd[i][j]=='&') cmd[i][j]='\0';
+				}
+				//backpid_index--;
+				break;
+			}
+		}
+		
+	}
+	
+}
 void execArgs(char** parsed)
 {
     // Forking a child
+    if(parsed[0]==NULL) return;
+    int i,status;
+    background=0;
+    for(i=0;i<MAXLIST;i++){
+	if(parsed[i]==NULL){
+		break;
+	}
+    }
+    if(strcmp(parsed[i-1],"&")==0){
+	background=1;
+	parsed[i-1]=NULL;	
+    }
+    if(signal(SIGCHLD, sig_handler)){
+	//perror("signal sigchiled error\n");
+    }
     pid_t pid = fork();
 
     if (pid == -1) {
         printf("\nFailed forking child..");
         return;
     } else if (pid == 0) {
+	//sleep(2);
         if (execvp(parsed[0], parsed) < 0) {
             printf("\nCould not execute command..");
         }
+	/*if(background==1){
+		int i,j;
+		for(i=0;i<backpid_index;i++){
+			if(backpid[i]==getppid()){
+				backpid[i]=-backpid[i];
+				for(j=0;j<strlen(cmd[i]);j++){
+					if(cmd[i][j]=='&') cmd[i][j]='\0';
+				}
+				sleep(2);
+				backpid_index--;
+				break;
+			}
+		}
+		
+		for(j=i;j<backpid_index;j++){
+			backpid[j]=backpid[j+1];
+			cmd[j]=cmd[j+1];
+		}
+	}*/
         exit(0);
     } else {
         // waiting for child to terminate
-        wait(NULL);
+	//printf("pid %d\n",getpid());
+	if(background==0) waitpid(pid,&status,0);
+	else{
+		
+		backpid[backpid_index]=pid;
+		//printf("backpid %d\n",backpid[backpid_index]);
+		//cmd[backpid_index]=str;
+		cmd[backpid_index] = (char*)malloc(sizeof(char)*100);
+		strcpy(cmd[backpid_index++],input_copy);
+		printf("[%d] %d\n",(backpid_index),pid);
+		//printf("backpid %d\n",backpid[backpid_index]);
+	}
+        //wait(NULL);
         return;
     }
 }
@@ -259,22 +337,6 @@ void execArgsPiped(char** parsed, char** parsedpipe)
     }
 }
 
-// Help command builtin
-void openHelp()
-{
-    puts("\n***WELCOME TO MY SHELL HELP***"
-        "\nCopyright @ Suprotik Dey"
-        "\n-Use the shell at your own risk..."
-        "\nList of Commands supported:"
-        "\n>cd"
-        "\n>ls"
-        "\n>exit"
-        "\n>all other general commands available in UNIX shell"
-        "\n>pipe handling"
-        "\n>improper space handling");
-
-    return;
-}
 
 extern char** environ;
 char* undefined[MAXLIST];
@@ -448,25 +510,28 @@ void export(char** parsed,int or,int block){
 // Function to execute builtin commands
 int ownCmdHandler(char** parsed,int or,int block){
 
-	int NoOfOwnCmds = 5, i, switchOwnArg = 0;
+	int NoOfOwnCmds = 7, i, switchOwnArg = 0;
     	char* ListOfOwnCmds[NoOfOwnCmds];
     	char* username;
 
     	ListOfOwnCmds[0] = "exit";
     	ListOfOwnCmds[1] = "cd";
-    	//ListOfOwnCmds[2] = "help";
+    	
     	//ListOfOwnCmds[3] = "hello";
 	ListOfOwnCmds[2] = "export";
     	ListOfOwnCmds[3] = "echo";
     	ListOfOwnCmds[4] = "pwd";
-
+	ListOfOwnCmds[5] = "jobs";
+	ListOfOwnCmds[6] = "kill";
     	for (i = 0; i < NoOfOwnCmds; i++) {
         	if (strcmp(parsed[0], ListOfOwnCmds[i]) == 0) {
             	switchOwnArg = i + 1;
+		//printf("%d\n",(i+1));
             	break;
         	}
     	}
 	FILE* output_file;
+	int status,done,start_to_del=-1;
     	switch (switchOwnArg) {
     	case 1:
         	//printf("\nGoodbye\n");
@@ -474,10 +539,7 @@ int ownCmdHandler(char** parsed,int or,int block){
     	case 2:
         	chdir(parsed[1]);
         	return 1;
-    	/*case 3:
-        	openHelp();
-        	return 1;
-    	case 4:
+    	/*case 4:
         	username = getenv("USER");
         	printf("\nHello %s.\nMind that this is "
             	"not a place to play around."
@@ -580,7 +642,29 @@ int ownCmdHandler(char** parsed,int or,int block){
 			
 		}
 		return 1;
-
+	case 6://[1]+  Running                 sleep 3 &
+		
+		for(i=0;i<backpid_index;i++){
+			//done=waitpid(backpid[i],&status,0);
+			if(backpid[i]>0) printf("[%d]+  Running                 %s\n",i+1,cmd[i]);
+			else{ 
+printf("[%d]+  Done                    %s\n",i+1,cmd[i]);	
+				start_to_del=i;	
+				
+			}
+		}
+		if(start_to_del>-1){
+		backpid_index--;				
+		int j;
+		for(j=start_to_del;j<backpid_index;j++){
+			backpid[j]=backpid[j+1];
+			cmd[j]=cmd[j+1];
+		}}
+		return 1;
+	case 7:
+		//printf("%d\n",kill(atoi(parsed[1]),SIGABRT));
+		kill(atoi(parsed[1]),SIGABRT)
+		return 1;
     	default:
         	break;
     	}
@@ -666,6 +750,8 @@ int main(){
         	// print shell line and take input
 		if (takeInput(inputString))
 		    continue;
+		input_copy = (char*)malloc(sizeof(char)*strlen(inputString));
+		strcpy(input_copy,inputString);
 		// process
 		execFlag = processString(inputString,
 		parsedArgs, parsedArgsPiped);
