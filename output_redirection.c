@@ -67,6 +67,7 @@ main()
         i = 0;
         err = 0;
         while (1) {
+	    printf("i=%d\n",i);
             cp = args[i++];
 	    printf("cp %s\n",cp);
             if (cp == NULL)
@@ -88,10 +89,13 @@ main()
 
             case '>':
 		printf("is > !!\n");
-                if (cp[1] == 0)
-                    cp = args[i++];
-                else
-                    ++cp;
+		printf("cp[1] is %c\n",cp[1]);
+                if (cp[1] == 0){//only one char(only >)
+		    printf("if\n");
+                    cp = args[i++];}
+                else{//between > and file no block
+		    printf("else\n");
+                    ++cp;}
                 ofile = cp;
 		printf("ofile %s\n",ofile);
                 if (cp == NULL)
