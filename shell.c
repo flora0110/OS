@@ -563,7 +563,10 @@ int ownCmdHandler(char** parsed,int or,int block){
         	}
     	}
 	FILE* output_file;
-	int status,done,start_to_del=-1;
+	int status,done,start_to_del=-1,check_all_stop=0,p=-1,m=-1;
+	char plus_minus=' ';
+	HISTORY_STATE *myhist = history_get_history_state();
+	HIST_ENTRY **mylist = history_list();
     	switch (switchOwnArg) {
     	case 1:
         	//printf("\nGoodbye\n");
@@ -686,30 +689,79 @@ int ownCmdHandler(char** parsed,int or,int block){
 		}
 		return 1;
 	case 6://[1]+  Running                 sleep 3 &
-	case 8:
-		
+		for(i=0;i<backpid_index;i++){
+			if(backpid[i]!=0) break;
+		}
+		if(i==backpid_index) check_all_stop=1;
+		for(i;i<backpid_index;i++){
+			if(backpid[i]!=0){
+				m=p;
+				p=i;
+			}
+		}
 		for(i=0;i<backpid_index;i++){
 			//done=waitpid(backpid[i],&status,0);
 			if(backpid[i]>0) printf("[%d]+  Running                 %s\n",i+1,cmd[i]);
-			else{ 
+			else if(backpid[i]<0){ 
 printf("[%d]+  Done                    %s\n",i+1,cmd[i]);	
-				start_to_del=i;	
+				backpid[i]=0;	
 				
 			}
 		}
-		if(start_to_del>-1){
-		backpid_index--;				
-		int j;
-		for(j=start_to_del;j<backpid_index;j++){
-			backpid[j]=backpid[j+1];
-			cmd[j]=cmd[j+1];
-		}}
+		if(check_all_stop==1){
+			backpid_index=0;
+		}			
+		
+		return 1;
+	case 8:
+		if(backpid_index==0){
+			printf("bash: bg: current: no such job\n");
+			return 1;
+		}
+		for(i=0;i<backpid_index;i++){
+			if(backpid[i]!=0){
+				m=p;
+				p=i;
+			}
+		}
+		if(p<0) {
+			check_all_stop=1;
+			printf("bash: bg: job has terminated\n");
+		}
+		else {
+			if(backpid[p]>0){
+				printf("bash: bg: job %d already in background\n",(p+1));
+			}
+			else printf("bash: bg: job has terminated\n");
+		}
+		
+		for(i=0;i<backpid_index;i++){
+			//done=waitpid(backpid[i],&status,0);
+			if(backpid[i]<0){ 
+				if(i==p){
+printf("[%d]+  Done                    %s\n",i+1,cmd[i]);}
+				else if(i==m){
+printf("[%d]-  Done                    %s\n",i+1,cmd[i]);}
+				else{
+printf("[%d]   Done                    %s\n",i+1,cmd[i]);}
+				backpid[i]=0;	
+				
+			}
+		}
+		if(check_all_stop==1){
+			backpid_index=0;
+		}	
 		return 1;
 	case 7:
 		//printf("%d\n",kill(atoi(parsed[1]),SIGABRT));
 		kill(atoi(parsed[1]),SIGABRT);
 		return 1;
 	case 9:
+		for(i=(myhist->length - atoi(parsed[1]));i < myhist->length;i++){
+			printf("%s %s\n",mylist[i]->line,mylist[i]->timestamp);
+			//free(mylist[i]);
+		}
+		return 1;
     	default:
         	break;
     	}
