@@ -206,35 +206,28 @@ int backpid[MAXLIST];
 int backpid_index=0;
 char* cmd[MAXLIST];
 char* input_copy;
-int background;
+int background,status;
 
 void sig_handler(int signo){
-	//printf("child process deaded, signo : %d\n",signo);
-	//printf("background %d\n",background);
-	pid_t pid=wait(0);
-	if(background==1){
+	pid_t pid=waitpid(pid,&status,WNOHANG);
+	//if(background==1){
 		int i,j;
 		for(i=0;i<backpid_index;i++){
-			
 			if(backpid[i]==pid){
-				
-				//printf("inif\n");
 				backpid[i]=-backpid[i];
-				//printf("backpid[%d] %d\n",i,backpid[i]);
 				for(j=0;j<strlen(cmd[i]);j++){
 					if(cmd[i][j]=='&') cmd[i][j]='\0';
 				}
-				//backpid_index--;
 				break;
 			}
 		}
 		
-	}
+	//}
 	
 }
 void execArgs(char** parsed)
 {
-    // Forking a child
+    // Forking a childS
     if(parsed[0]==NULL) return;
     int i,status;
     background=0;
@@ -256,45 +249,23 @@ void execArgs(char** parsed)
         printf("\nFailed forking child..");
         return;
     } else if (pid == 0) {
-	//sleep(2);
-        if (execvp(parsed[0], parsed) < 0) {
+	//printf("getpid %d\n",getpid());
+	if (execvp(parsed[0], parsed) < 0) {
             printf("\nCould not execute command..");
         }
-	/*if(background==1){
-		int i,j;
-		for(i=0;i<backpid_index;i++){
-			if(backpid[i]==getppid()){
-				backpid[i]=-backpid[i];
-				for(j=0;j<strlen(cmd[i]);j++){
-					if(cmd[i][j]=='&') cmd[i][j]='\0';
-				}
-				sleep(2);
-				backpid_index--;
-				break;
-			}
-		}
-		
-		for(j=i;j<backpid_index;j++){
-			backpid[j]=backpid[j+1];
-			cmd[j]=cmd[j+1];
-		}
-	}*/
         exit(0);
     } else {
         // waiting for child to terminate
-	//printf("pid %d\n",getpid());
+	//printf("pid %d\n",pid);
+	//printf("background %d\n",background);
 	if(background==0) waitpid(pid,&status,0);
 	else{
 		
 		backpid[backpid_index]=pid;
-		//printf("backpid %d\n",backpid[backpid_index]);
-		//cmd[backpid_index]=str;
 		cmd[backpid_index] = (char*)malloc(sizeof(char)*100);
 		strcpy(cmd[backpid_index++],input_copy);
 		printf("[%d] %d\n",(backpid_index),pid);
-		//printf("backpid %d\n",backpid[backpid_index]);
 	}
-        //wait(NULL);
         return;
     }
 }
