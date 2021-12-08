@@ -113,8 +113,11 @@ void output_redirection(char** args){
 		    //printf("if\n");
                     cp = args[i++];}
 		else if(cp[1]=='>'){
-			//printf("app\n");
+			//printf("find app\n");
 			app=1;
+			//++cp;
+			cp = args[i++];
+			if(cp[2]!=0){++cp;}
 		}
                 else{//between > and file no block
 		    //printf("else\n");
@@ -159,6 +162,7 @@ void output_redirection(char** args){
             if (ofile != NULL) {
 		int fd2;
 		if(app==1){
+			//printf("append way to open\n");
 			if ((fd2 = open(ofile, O_APPEND | O_WRONLY, 0644)) < 0) {
 		            perror("couldn't open output file.");
 		            exit(0);
@@ -478,17 +482,24 @@ void export(char** parsed,int or,int block){
 				//printf("copy %c\n",copy[i]);
 				if(copy[i]=='$'){
 					check=1;start=i;
-					i+=2;
+					i++;
 					break;
 				}
 			}
 			//printf("i%d\n",i);
+			
 			if(check==1){
 				char* name=(char*)malloc(sizeof(char)*30);
 				int q=0;
+				if(copy[i]=='{') i++;
 				for(i;i<strlen(copy);i++){
 					//printf("2 copy %c\n",copy[i]);
 					if(copy[i]=='}'){
+						name[q]='\0';
+						break;
+					}
+					if(copy[i]==':'){
+						i--;
 						name[q]='\0';
 						break;
 					}
@@ -520,10 +531,16 @@ void export(char** parsed,int or,int block){
 	if(or==1) {//printf("export os 1\n");
 		fclose(output_file);}
 }
+void getvar(char* parsedBlock,FILE* output_file,int or){
+	char* cp=parsedBlock;
+	cp++;
+	if(or==1) fprintf(output_file,"%s",getenv(cp));
+	else printf("%s",getenv(cp));
+}
 // Function to execute builtin commands
 int ownCmdHandler(char** parsed,int or,int block){
 
-	int NoOfOwnCmds = 7, i, switchOwnArg = 0;
+	int NoOfOwnCmds = 9, i, switchOwnArg = 0;
     	char* ListOfOwnCmds[NoOfOwnCmds];
     	char* username;
 
@@ -536,6 +553,8 @@ int ownCmdHandler(char** parsed,int or,int block){
     	ListOfOwnCmds[4] = "pwd";
 	ListOfOwnCmds[5] = "jobs";
 	ListOfOwnCmds[6] = "kill";
+	ListOfOwnCmds[7] = "bg";
+	ListOfOwnCmds[8] = "history";
     	for (i = 0; i < NoOfOwnCmds; i++) {
         	if (strcmp(parsed[0], ListOfOwnCmds[i]) == 0) {
             	switchOwnArg = i + 1;
@@ -618,18 +637,29 @@ int ownCmdHandler(char** parsed,int or,int block){
 				else printf("\n");
 				return 1;
 			}
-			//printf("%s",parsed[1]);
-			if(or==1) fprintf(output_file,"%s",parsed[1]);
-			else printf("%s",parsed[1]);
-
+			else if(parsed[1][0]=='$'){
+				char* cp=parsed[1];
+				cp++;
+				if(or==1) fprintf(output_file,"%s",getenv(cp));
+				else printf("%s",getenv(cp));
+			}
+			else{
+				//printf("%s",parsed[1]);
+				if(or==1) fprintf(output_file,"%s",parsed[1]);
+				else printf("%s",parsed[1]);
+			}
 			int i;
 			for (i = 2; i < MAXLIST; i++) {
 				if (parsed[i] == NULL || parsed[i][0]=='>'){
 					break;
 				}
+				if(parsed[i][0]=='$'){
+					getvar(parsed[i],output_file,or);
+				}
+				else{
 				//printf(" %s",parsed[i]);
 				if(or==1) fprintf(output_file," %s",parsed[i]);
-				else printf(" %s",parsed[i]);
+				else printf(" %s",parsed[i]);}
 				    
 			}
 			if(or==1) {//printf("case 4 \n");
@@ -656,6 +686,7 @@ int ownCmdHandler(char** parsed,int or,int block){
 		}
 		return 1;
 	case 6://[1]+  Running                 sleep 3 &
+	case 8:
 		
 		for(i=0;i<backpid_index;i++){
 			//done=waitpid(backpid[i],&status,0);
@@ -678,6 +709,7 @@ printf("[%d]+  Done                    %s\n",i+1,cmd[i]);
 		//printf("%d\n",kill(atoi(parsed[1]),SIGABRT));
 		kill(atoi(parsed[1]),SIGABRT);
 		return 1;
+	case 9:
     	default:
         	break;
     	}
